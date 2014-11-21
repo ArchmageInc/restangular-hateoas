@@ -289,7 +289,7 @@
                 
                 this.fieldMappings  =   angular.copy(defaultFieldMappings);
                 
-                this.setConfiguration(configuration);
+                setConfiguration(this, configuration);
                 
                 /*
                  * Set the base URL of the API
