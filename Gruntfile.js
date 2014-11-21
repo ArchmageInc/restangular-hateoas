@@ -16,7 +16,7 @@ module.exports = function(grunt) {
       }
     },
     jshint:{
-      files: ['src/ngc-exceptions.js']
+      files: ['src/**/*.js']
     },
     uglify:{
       options:{
