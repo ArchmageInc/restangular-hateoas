@@ -25,16 +25,12 @@
         function setProperties(properties, value) {
             if (_.isObject(properties)) {
                 _.merge(configuration, properties);
-            } else if (_.isString(properties) && _.get(configuration, properties, null) !== null) {
-                _.set(properties, value);
+            } else if (_.isString(properties)) {
+                _.set(configuration, properties, value);
             }
         }
 
-        function getConfiguration() {
-            return configuration;
-        }
-
         this.set  = setProperties;
-        this.$get = getConfiguration;
+        this.$get = _.constant(configuration);
     });
 }(angular, _));

@@ -9,8 +9,6 @@
         ngAnnotate  =   require('gulp-ng-annotate'),
         open        =   require('gulp-open'),
         uglify      =   require('gulp-uglifyjs'),
-        rename      =   require('gulp-rename'),
-        less        =   require('gulp-less'),
         stylish     =   require('jshint-stylish'),
         karma       =   require('karma').server,
         bowerFiles  =   require('main-bower-files'),
@@ -18,9 +16,7 @@
         path        =   require('path'),
         mergeStream =   require('merge-stream');
 
-    var port = 8000;
-
-    gulp.task('build', ['clean', 'bower', 'js', 'html', 'fonts', 'css', 'images'], function (cb) {
+    gulp.task('build', ['clean', 'bower', 'js'], function (cb) {
         cb();
     });
     gulp.task('clean', ['clean:build'], function (cb) {
@@ -28,12 +24,12 @@
     });
     gulp.task('clean:build', function(cb) {
         del([
-            'dist',
-            'example/build'
+            'dist'
         ], cb);
     });
 
-    gulp.task('js', ['js:compress', 'js:example', 'js:wiredep'], function (cb) {
+
+    gulp.task('js', ['js:compress', 'js:wiredep'], function (cb) {
         cb();
     });
 
@@ -43,38 +39,26 @@
             'src/**/*-module.js',
             'src/**/*.js'
         ];
-        return gulp.src(exportFiles)
-            .pipe(ngAnnotate())
-            .pipe(uglify('restangular-hateoas.min.js', {
-                outSourceMap: false
-            }))
-            .pipe(gulp.dest('dist/js'))
-            .pipe(gulp.dest('example/build/js'));
-    });
-    gulp.task('js:example', ['clean'], function () {
-        var exportFiles = [
-            '!example/src/**/*-test.js',
-            'example/src/**/*-module.js',
-            'example/src/**/*.js'
-        ];
         var annotated = gulp.src(exportFiles)
             .pipe(ngAnnotate());
 
         var compressed = annotated
-            .pipe(uglify('restangular-hateoas-example-app.min.js', {
+            .pipe(uglify('restangular-hateoas.min.js', {
                 outSourceMap: true,
                 sourceRoot:   './'
             }))
-            .pipe(gulp.dest('example/build/js'));
+            .pipe(gulp.dest('dist'))
+            .pipe(gulp.dest('example/js/lib'));;
 
         var uncompressed = annotated
-            .pipe(gulp.dest('example/build/js/src'));
+            .pipe(gulp.dest('example/js/lib/src'));
+
 
         return mergeStream(compressed, uncompressed);
     });
     gulp.task('js:wiredep', ['clean', 'bower'], function () {
         return gulp.src(
-            'example/src/index.html'
+            'example/index.html'
         )
         .pipe(wiredep.stream({
             fileTypes: {
@@ -90,74 +74,14 @@
                 }
             }
         }))
-        .pipe(gulp.dest('example/build'));
+        .pipe(gulp.dest('example'));
     });
+
     gulp.task('bower', ['clean'], function () {
-        return gulp.src(bowerFiles({
-            paths: {
-                includeDev: true,
-                bowerDirectory: 'bower_components',
-                bowerJson: 'example/src/bower.json'
-            }
-        }))
-        .pipe(gulp.dest('example/build/js/lib'));
-    });
-
-    gulp.task('html', ['clean'], function () {
-        return gulp.src([
-            'example/src/**/*.html',
-            '!example/src/index.html'
-        ])
-        .pipe(gulp.dest('dist'));
-    });
-
-    gulp.task('css', ['css:less', 'css:vendor'], function (cb) {
-        del([
-          'example/build/js/lib/**/*.css',
-          'example/build/js/lib/**/*.css.map'
-        ], cb);
-    });
-    gulp.task('css:less', ['clean'], function () {
-        return gulp.src('./example/src/less/main.less')
-            .pipe(less())
-            .pipe(rename('style.css'))
-            .pipe(gulp.dest('example/css'));
-    });
-    gulp.task('css:vendor', ['clean', 'bower'], function () {
-        return gulp.src([
-            'example/buid/js/lib/**/*.css',
-            'example/build/js/lib/**/*.css.map'
-        ])
-        .pipe(gulp.dest('dist/css'));
-    });
-
-    gulp.task('fonts', ['fonts:vendor'], function (cb) {
-        del([
-            'example/build/js/lib/**/*.ttf',
-            'example/build/js/lib/**/*.eot',
-            'example/build/js/lib/**/*.woff',
-            'example/build/js/lib/**/*.otf',
-            'example/build/js/lib/**/*.svg'
-        ],cb);
-    });
-
-    gulp.task('fonts:vendor', ['clean', 'bower'], function () {
-        return gulp.src([
-            'example/src/assets/fonts/**/*',
-            'example/build/js/lib/**/*.ttf',
-            'example/build/js/lib/**/*.eot',
-            'example/build/js/lib/**/*.woff',
-            'example/build/js/lib/**/*.otf',
-            'example/build/js/lib/**/*.svg'
-        ])
-        .pipe(gulp.dest('example/build/fonts'));
-    });
-
-    gulp.task('images', ['clean'], function (cb) {
-        return gulp.src([
-            'example/src/assets/images/**/**.*'
-        ])
-        .pipe(gulp.dest('example/build/images'));
+        return gulp.src(
+            bowerFiles()
+        )
+        .pipe(gulp.dest('example/js/lib'));
     });
 
     gulp.task('test:js', ['test:jshint', 'test:jscs', 'test:unit'], function (cb) {
@@ -167,8 +91,8 @@
         var files   =   wiredep({
             devDependencies: true
         }).js.concat([
-            'example/src/**/*-module.js',
-            'example/src/**/*.js'
+            'src/**/*-module.js',
+            'src/**/*.js'
         ]);
         karma.start({
             configFile: __dirname + '/karma.conf.js',
@@ -178,32 +102,29 @@
         });
     });
     gulp.task('test:jshint', function () {
-        return gulp.src([
-            'src/**.*.js',
-            'example/src/**/*.js'
-        ])
+        return gulp.src(
+            'src/**/*.js'
+        )
         .pipe(jshint())
         .pipe(jshint.reporter(stylish));
     });
 
     gulp.task('test:jscs', function () {
-        return gulp.src([
-            'src/**/*.js',
-            'example/src/**/*.js'
-        ])
+        return gulp.src(
+            'src/**/*.js'
+        )
         .pipe(jscs());
     });
     gulp.task('connect', ['build'], function () {
         connect.server({
-            port:       port,
-            root:       'example/build',
+            port:       8000,
+            root:       'example',
             livereload: true
         });
     });
     gulp.task('watch', function (cb) {
         return gulp.watch([
-            'src/**/*',
-            'example/src/**/*'
+            'src/**/*'
         ], ['build', 'test:js', 'reload']);
 
     });
@@ -214,13 +135,13 @@
     });
 
     gulp.task('open', ['connect'], function () {
-        return gulp.src('example/build/index.html')
+        return gulp.src('example/index.html')
             .pipe(open('', {
-                url: 'http://localhost:' + port
+                url: 'http://localhost:8000'
         }));
     });
 
-    gulp.task('tdd', ['build', 'open','test:js', 'watch'], function (cb) {
+    gulp.task('tdd', ['build', 'open', 'watch'], function (cb) {
         cb();
     });
 }());

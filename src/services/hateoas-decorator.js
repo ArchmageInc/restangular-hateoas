@@ -106,9 +106,7 @@
                 }
             }
 
-            return $q.all(promises).then(function () {
-                return restangularObject;
-            });
+            return $q.all(promises).then(_.constant(restangularObject));
         }
         
         function hateoasGetList(restangularObject, restangularGetListFn) {

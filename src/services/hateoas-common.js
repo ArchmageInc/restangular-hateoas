@@ -46,17 +46,17 @@
                     });
                 },
                 cleanTemplatedLinks: function (links) {
-                    var returnLinks = _.clone(links, true);
-                    if (_.isObject(links)) {
-                        _.forEach(returnLinks, function (link, key) {
+                    if (_.isPlainObject(links)) {
+                        var returnLinks = {};
+                        _.forEach(links, function (link, key) {
                             returnLinks[key]   =   HateoasCommon.cleanTemplatedLinks(link);
                         });
                         return returnLinks;
                     }
-                    if (_.isString(returnLinks)) {
-                        return returnLinks.replace(/(.+)\{[\?|&].+\}/, '$1');
+
+                    if (_.isString(links)) {
+                        return links.replace(/(.+)\{[\?|&].+\}/, '$1');
                     }
-                    return returnLinks;
                 },
                 convertFromHateoas: function (restangularObject) {
                     if (!_.get(restangularObject, map.links)) {
@@ -68,21 +68,24 @@
                         if (childName !== 'self' && !_.get(restangularObject, childName)) {
                             HateoasCommon.applyHateoasChild(restangularObject, childName);
                         } else if (_.get(restangularObject, childName)) {
-                            _.set(restangularObject, childName + '.' + map.selfLink, childLink);
+                            _.set(restangularObject, childName + '.' + map.selfLink.substring(0, map.selfLink.lastIndexOf('.')), childLink);
                         }
                     });
                     return restangularObject;
                 },
+                isRestangularProperty: function (propertyName) {
+                    return !!_.includes(_.values(map), propertyName);
+                },
                 convertToHateoas: function (restangularObject) {
                     var result = _.get(restangularObject, map.restangularCollection) ? [] : {};
                     _.forEach(restangularObject, function (value, propertyName) {
-                        if (_.isObject(value) && _.get(value, map.restangularElement)) {
+                        if (_.isPlainObject(value) && _.get(value, map.restangularElement)) {
                             _.set(result, propertyName, value.getRestangularUrl());
                         }
                         if (_.isDate(value)) {
                             _.set(result, propertyName, value);
                         }
-                        if (_.isNull(value) || !_.isObject(value)) {
+                        if (!HateoasCommon.isRestangularProperty(propertyName) && (_.isNull(value) || !_.isObject(value))) {
                             _.set(result, propertyName, value);
                         }
                         if (value === '') {

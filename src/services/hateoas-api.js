@@ -96,6 +96,21 @@
             };
         }
 
+        function createElement(apiInstance, serviceInstance, properties) {
+            properties = _.pick(properties, _.keys(serviceInstance._modelDefaults));
+
+            var model = apiInstance.restangularizeElement(null, _.clone(serviceInstance._modelDefaults), serviceInstance._route);
+
+            _.extend(model, properties);
+
+            return model;
+        }
+
+        function elementTransformer(serviceInstance, object) {
+            object._modelService = serviceInstance;
+            return object;
+        }
+
         function HateoasApi(baseUrl) {
             var apiInstance = this;
             _.extend(this, Restangular.withConfig(function (RestangularConfigurer) {
@@ -110,26 +125,15 @@
             }));
             _.set(this, map.service, this.service);
 
-            this.ModelService = function (route, modelDefaults) {
+            this.ModelService = function (route, modelDefaults, configuration) {
                 var serviceInstance = this;
-                _.extend(this, _.get(apiInstance, map.service)(route), {
+                _.extend(this, apiInstance.all(route).withHttpConfig(configuration), {
                     _modelDefaults: modelDefaults,
                     _route: route,
-                    create: _.bind(function (properties) {
-                        properties = _.pick(properties, _.keys(serviceInstance._modelDefaults));
-
-                        var model = apiInstance.restangularizeElement(null, _.clone(serviceInstance._modelDefaults), serviceInstance._route);
-
-                        _.extend(model, properties);
-
-                        return model;
-                    }, this)
+                    create: _.bind(_.partial(createElement, apiInstance, serviceInstance), this)
                 });
 
-                apiInstance.addElementTransformer(route, function (object) {
-                    object._modelService = serviceInstance;
-                    return object;
-                });
+                apiInstance.addElementTransformer(route, _.partial(elementTransformer, serviceInstance));
             };
         }
 
