@@ -377,6 +377,7 @@ The configuration service injected into HateoasApi instances
 ### HateoasApi
 
 *(CLASS) Injectable*
+
 An API communication layer to a specific REST server
 
 #### Methods
@@ -392,6 +393,7 @@ An API communication layer to a specific REST server
 ### ModelService
 
 *(CLASS) Not Injectable*
+
 An API communication layer to a specific endpoint of a REST server
 
 ### Methods
@@ -406,6 +408,7 @@ An API communication layer to a specific endpoint of a REST server
 ###modelInstance
 
 *Not Injectable*
+
 An element created through a call to a ModelService instance's create method. This is a restangular element.
 
 #### Methods
@@ -428,6 +431,7 @@ An element created through a call to a ModelService instance's create method. Th
 ### collectionInstance
 
 *Not Injectable*
+
 A collection created by retrieving a set of elements from a REST server. This is a restangular collection.
 
 #### Methods
@@ -448,6 +452,7 @@ A collection created by retrieving a set of elements from a REST server. This is
 ### PromiseFill
 
 *Not Injectable*
+
 The promise fill object are temporary accessors to what will be an element or collection.
 see [Restangular Enhanced Promises](https://github.com/mgonto/restangular/blob/master/README.md#enhanced-promises).
 This library uses these promise fill objects to allow sending an element to the template and allowing Angular's scope digest to force the resolution of linked properties.
@@ -466,6 +471,8 @@ see [Angular's $q Service](https://docs.angularjs.org/api/ng/service/$q)
 
 ### HateoasDecorator
 
+*Injectable*
+
 A utility used by the HateoasApi service to decorate restangular elements and collections.
 
 #### Methods
@@ -475,6 +482,8 @@ A utility used by the HateoasApi service to decorate restangular elements and co
 * **decorateCollection(restangularCollection:Array):Array** - The entrypoint to decorate a restangular collection. Returns the mutated collection.
 
 ### HateoasCommon
+
+*Injectable*
 
 A collection of utility methods used throughout the library to manipulate HATEOAS objects, links, and properties.
 
