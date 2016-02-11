@@ -3,7 +3,7 @@
 (function (angular, _) {
     'use strict';
     angular.module('restangular-hateoas')
-    .provider('hateoasConfiguration', function () {
+    .provider('HateoasConfiguration', function () {
         var defaultConfiguration = {
             map: {
                 restangularCollection:  '$restangularCollection',
@@ -30,7 +30,12 @@
             }
         }
 
-        this.set  = setProperties;
+        function getProperties() {
+            return _.clone(configuration, true);
+        }
+
+        this.getConfiguration  = getProperties;
+        this.setConfiguration  = setProperties;
         this.$get = _.constant(configuration);
     });
 }(angular, _));

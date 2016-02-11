@@ -3,8 +3,8 @@
 (function (angular, Object, _) {
     'use strict';
     angular.module('restangular-hateoas')
-    .factory('HateoasCommon', function (hateoasConfiguration) {
-        var map = hateoasConfiguration.map;
+    .factory('HateoasCommon', function (HateoasConfiguration) {
+        var map = HateoasConfiguration.map;
 
         var HateoasCommon = {
                 getId: function (restangularElement) {

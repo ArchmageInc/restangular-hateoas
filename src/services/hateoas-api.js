@@ -4,8 +4,8 @@
     'use strict';
     
     angular.module('restangular-hateoas')
-    .factory('HateoasApi', function ($http, Restangular, hateoasConfiguration, HateoasCommon, HateoasDecorator) {
-        var map = hateoasConfiguration.map;
+    .factory('HateoasApi', function ($http, Restangular, HateoasConfiguration, HateoasCommon, HateoasDecorator) {
+        var map = HateoasConfiguration.map;
 
         function beforeObjectRestangularized(object, isCollection) {
             if (isCollection && object.falseCollection) {
@@ -25,7 +25,7 @@
             return HateoasDecorator.decorate(object, isCollection);
         }
 
-        function responseInteceptor(data, operation, route, url, response, deferred) {
+        function responseInteceptor(apiInstance, data, operation, route, url, response, deferred) {
             route = _.get(response, 'config._route') || route;
             operation = operation === 'getList' && !_.get(data, map.embedded) && _.get(data, map.links) ? 'getListOne' : operation;
             data = data || _.get(response, 'config.data', {});
@@ -39,10 +39,12 @@
                     baseObject.falseCollection = true;
                     break;
                 case 'getList':
-                    _.forEach(_.get(baseObject, map.embedded + '.' + route), function (element) {
+                    var extractedData = _.get(baseObject, map.embedded + '.' + route);
+                    _.forEach(extractedData, function (element) {
                         _.set(element, map.original, _.clone(element, false));
                     });
-                    _.set(baseObject, map.links, HateoasCommon.cleanTemplatedLinks(_.get(baseObject, map.links)));
+                    _.set(extractedData, map.links, HateoasCommon.cleanTemplatedLinks(_.get(baseObject, map.links)));
+                    baseObject = extractedData;
                     break;
                 case 'post':
                 case 'patch':
@@ -63,22 +65,24 @@
             return baseObject;
         }
 
-        function requestInterceptor(object, operation, route, url, headers, params, httpConfig) {
+        function requestInterceptor(apiInstance, object, operation, route, url, headers, params, httpConfig) {
             headers = _.extend({}, _.get($http, 'default.headers.common'), headers);
+            headers.Authorization = apiInstance.authorization.token;
             route = _.get(params, '_route', route);
 
-            var baseObject;
+            var baseObject,
+                processRaw = httpConfig.processRaw;
 
             delete params._route;
 
             switch (operation) {
                 case 'patch':
                 case 'update':
-                    baseObject = object.getChangedProperties();
+                    baseObject = processRaw ? object : object.getChangedProperties();
                     break;
                 case 'post':
                 case 'put':
-                    baseObject = HateoasCommon.convertToHateoas(object);
+                    baseObject = processRaw ? object : HateoasCommon.convertToHateoas(object);
                     break;
             }
 
@@ -120,8 +124,8 @@
 
                 RestangularConfigurer.setOnBeforeElemRestangularized(beforeObjectRestangularized);
                 RestangularConfigurer.setOnElemRestangularized(afterObjectRestangularized);
-                RestangularConfigurer.addResponseInterceptor(responseInteceptor);
-                RestangularConfigurer.addFullRequestInterceptor(requestInterceptor);
+                RestangularConfigurer.addResponseInterceptor(_.partial(responseInteceptor, apiInstance));
+                RestangularConfigurer.addFullRequestInterceptor(_.partial(requestInterceptor, apiInstance));
             }));
             _.set(this, map.service, this.service);
 
@@ -135,7 +139,12 @@
 
                 apiInstance.addElementTransformer(route, _.partial(elementTransformer, serviceInstance));
             };
+
+            this.authorization = {};
         }
+        HateoasApi.prototype.setAuthToken = function (token) {
+            this.authorization.token = token;
+        }; 
 
         return HateoasApi;
 

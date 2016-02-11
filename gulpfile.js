@@ -29,7 +29,7 @@
     });
 
 
-    gulp.task('js', ['js:compress', 'js:wiredep'], function (cb) {
+    gulp.task('js', ['js:compress', 'js:wiredep', 'example:js:compress'], function (cb) {
         cb();
     });
 
@@ -48,17 +48,39 @@
                 sourceRoot:   './'
             }))
             .pipe(gulp.dest('dist'))
-            .pipe(gulp.dest('example/js/lib'));;
+            .pipe(gulp.dest('example/build/js/lib'));;
 
         var uncompressed = annotated
-            .pipe(gulp.dest('example/js/lib/src'));
+            .pipe(gulp.dest('example/build/js/lib/src'));
+
+
+        return mergeStream(compressed, uncompressed);
+    });
+    gulp.task('example:js:compress', ['clean'], function () {
+        var exportFiles = [
+            '!**/*-test.js',
+            'example/src/**/*-module.js',
+            'example/src/**/*.js'
+        ];
+        var annotated = gulp.src(exportFiles)
+            .pipe(ngAnnotate());
+
+        var compressed = annotated
+            .pipe(uglify('restangular-hateoas-example-app.min.js', {
+                outSourceMap: true,
+                sourceRoot:   './'
+            }))
+            .pipe(gulp.dest('example/build/js'));;
+
+        var uncompressed = annotated
+            .pipe(gulp.dest('example/build/js/src'));
 
 
         return mergeStream(compressed, uncompressed);
     });
     gulp.task('js:wiredep', ['clean', 'bower'], function () {
         return gulp.src(
-            'example/index.html'
+            'example/src/index.html'
         )
         .pipe(wiredep.stream({
             fileTypes: {
@@ -74,14 +96,14 @@
                 }
             }
         }))
-        .pipe(gulp.dest('example'));
+        .pipe(gulp.dest('example/build'));
     });
 
     gulp.task('bower', ['clean'], function () {
         return gulp.src(
             bowerFiles()
         )
-        .pipe(gulp.dest('example/js/lib'));
+        .pipe(gulp.dest('example/build/js/lib'));
     });
 
     gulp.task('test:js', ['test:jshint', 'test:jscs', 'test:unit'], function (cb) {
@@ -118,13 +140,14 @@
     gulp.task('connect', ['build'], function () {
         connect.server({
             port:       8000,
-            root:       'example',
+            root:       'example/build',
             livereload: true
         });
     });
     gulp.task('watch', function (cb) {
         return gulp.watch([
-            'src/**/*'
+            'src/**/*',
+            'example/src/**/*'
         ], ['build', 'test:js', 'reload']);
 
     });
@@ -135,13 +158,13 @@
     });
 
     gulp.task('open', ['connect'], function () {
-        return gulp.src('example/index.html')
+        return gulp.src('example/build/index.html')
             .pipe(open('', {
                 url: 'http://localhost:8000'
         }));
     });
 
-    gulp.task('tdd', ['build', 'open', 'watch'], function (cb) {
+    gulp.task('tdd', ['build', 'open', 'test:js', 'watch'], function (cb) {
         cb();
     });
 }());

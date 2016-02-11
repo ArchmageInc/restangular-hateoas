@@ -9,18 +9,18 @@
             _.defaults(mocks, {
 
             });
-            module('restangular-hateoas', function ($provide, hateoasConfigurationProvider) {
+            module('restangular-hateoas', function ($provide, HateoasConfigurationProvider) {
                 _.forEach(mocks, function (mock, mockName) {
                     $provide.constant(mockName, mock);
                     inj[mockName] = mock;
                 });
-                inj.hateoasConfigurationProvider = hateoasConfigurationProvider;
+                inj.HateoasConfigurationProvider = HateoasConfigurationProvider;
             });
-            inject(function ($rootScope, $timeout, hateoasConfiguration, HateoasApi, HateoasCommon) {
+            inject(function ($rootScope, $timeout, HateoasConfiguration, HateoasApi, HateoasCommon) {
                 _.defaults(inj, {
                     $scope: $rootScope.$new(),
                     $timeout: $timeout,
-                    hateoasConfiguration: hateoasConfiguration,
+                    HateoasConfiguration: HateoasConfiguration,
                     HateoasApi: HateoasApi,
                     HateoasCommon: HateoasCommon
                 });
@@ -82,7 +82,7 @@
             it('Allows setting configuration options as a hash', function () {
                 var inj = init();
 
-                inj.hateoasConfigurationProvider.set({
+                inj.HateoasConfigurationProvider.setConfiguration({
                     map: {
                         service: 'firstTest',
                         save: 'secondTest'
@@ -90,21 +90,21 @@
                 });
                 
 
-                expect(inj.hateoasConfiguration.map.service).toEqual('firstTest');
-                expect(inj.hateoasConfiguration.map.save).toEqual('secondTest');
+                expect(inj.HateoasConfiguration.map.service).toEqual('firstTest');
+                expect(inj.HateoasConfiguration.map.save).toEqual('secondTest');
             });
 
             it('Allows setting configuration options individually', function () {
                 var inj = init();
 
-                inj.hateoasConfigurationProvider.set('map.service', 'thirdTest');
-                expect(inj.hateoasConfiguration.map.service).toEqual('thirdTest');
+                inj.HateoasConfigurationProvider.setConfiguration('map.service', 'thirdTest');
+                expect(inj.HateoasConfiguration.map.service).toEqual('thirdTest');
             });
 
             it('Does not error if invalid set paramaters are sent', function () {
                 var inj = init();
 
-                expect(_.partial(inj.hateoasConfigurationProvider.set, 5, 'forthTest')).not.toThrow();
+                expect(_.partial(inj.HateoasConfigurationProvider.setConfiguration, 5, 'forthTest')).not.toThrow();
             });
         });
         describe('Common Utilities > ', function () {

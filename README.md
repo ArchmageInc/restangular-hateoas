@@ -8,7 +8,27 @@ Now if you have ever worked with relational data through an API on a large proje
 This is not an ideal solution and a big driver in hyperlinked properties. The point of this module, is to simplify that interaction, by creating lazy-loaded, hyperlinked JavaScript object properties.
 This way, if the property is not accessed, it does not need to send another request to the API, and at the same time, you don't need extremely large API requests. 
 
+#Table of contents
+
+- [Dependencies](#dependencies)
+- [Purpose](#purpose)
+- [Caveats](#caveats)
+- [Providers](#providers)
+  - [HateoasConfigurationProvider](#hateoasconfigurationprovider)
+- [Services](#services)
+  - [HateoasConfiguration](#hateoasconfiguration)
+  - [HateoasApi](#hateoasapi)
+  - [HateoasDecorator](#hateoasdecorator)
+  - [HateoasCommon](#hateoascommon)
+
+## Dependencies
+
+- [AngularJS](https://angularjs.org)
+- [Restangular](https://github.com/mgonto/restangular)
+- [lodash](https://lodash.com/)
+
 ## Purpose
+
 Let's say you have a data structure like this:
 
 ```json
@@ -312,15 +332,167 @@ angular.module('myModule', ['restangular'])
 ```
 This provides a basic understanding of the purpose and use of restangular-hateoas, how it can simplify the use of view models attached to scope, and the slight differences in handling resolutions.
 
-## TL;DR;
+## Providers
+
+### HateoasConfigurationProvider
+
+A global restangularHateoas configuration which is used to assign instantiated services' additional properties
+
+#### Methods
+
+* **setConfiguration(property:String, value:*)** - Set a configuration property to a specified value
+* **setConfiguration(configuration:Object)** - Merge existing configuration with specified options
+* **getConfiguration()** - Retrieve a copy of the existing configuration object
+
+**Configuration:**
+```javascript
+{
+    map: { // A map of key value pairs defining method names and overrides
+        restangularCollection:  '$restangularCollection', // The property name defining if an object is a collection
+        restangularElement:     '$restangularElement', // The property name defining if an object is an element
+        save:                   '$restangularSave', // The re-mapped key name for restangular's save method
+        service:                '$restangularService', // The re-mapped key name for restangular's service method
+        embedded:               '_embedded', // The expected container array key name for collection endpoints
+        links:                  '_links', // The expected key name for non-embedded link references
+        selfLink:               '_links.self.href', // The path to the object's endpoint
+        nextLink:               '_links.next.href', // The path to a collection's endpoint to retrieve the next page of results
+        original:               '_original', // The property name which will contain an object's original values as sent by the API
+        changed:                '_changed', // The property name indicating if the object has been mutated
+        fromServer:             '_fromServer', // The property name indicating if the object was retrieved / exists on the API server
+        hiddenPromise:          '_promise' // The property name containing the hidden promise for fetching 
+    }
+}
+```
+
+## Services
+
+### HateoasConfiguration
+
+The configuration service injected into HateoasApi instances
+
+#### Properties
+
+* **map** - The configuration object storing property keys. see [HateoasConfigurationProvider](#HateoasConfigurationProvider)
+
+### HateoasApi
+
+*(CLASS) Injectable*
+An API communication layer to a specific REST server
+
+#### Methods
+
+* **constructor(baseUrl:String):HateoasApi** - Instantiate an API communication service with the base URL
+* **setAuthToken(token:String):undefined** - Set the authorization token for the instance to use for HTTP requests
+
+#### Properties
+
+* **authorization** - An authorization object used to authenticate HTTP requests
+* **ModelService** *(CLASS)* (see [ModelService](#ModelService))
+
+### ModelService
+
+*(CLASS) Not Injectable*
+An API communication layer to a specific endpoint of a REST server
+
+### Methods
+* **constructor(route:String, [modelDefaults:Object, configuration:Object]):ModelService** - Instantiate a model service for a given endpoint / route
+* **create([properties:Object]):modelInstance** - Create a restangular element from this service's endpoint (see [ModelInstance](#modelInstance))
+
+#### Properties
+
+* **_modelDefaults** - An object containing the default property values for created elements
+* **_route** - The route governed by the service instance
+
+###modelInstance
+
+*Not Injectable*
+An element created through a call to a ModelService instance's create method. This is a restangular element.
+
+#### Methods
+
+* **getId():String** - A method to retrieve the element's id
+* **save():[Promise](#PromiseFill)** - A method which will POST for new elements and PATCH changed properties for existing elements
+* **revert():modelInstance** - A method which will modify the elements properties and reset them to the last state communicated to or from the REST server
+* **getChangedProperties():Object** - A method which will return an object containing only the properties and values that have changed since the last communication to or from the REST server
+* **resolve(propertyPaths:Array):[Promise](#PromiseFill)** - A method which will attempt to resolve the element / child element properties from the paths provided. The promise will resolve with the element once all paths have been resolved
+* **get([queryParams:Object, headers:Object]):[Promise](#PromiseFill)** - A method to get the element. This is a passthrough to restangular element's get method.
+* **getList(subElement:String, [queryParams:Object, headers:Object]):[Promise](#PromiseFill)** - A method to get a nested collection. This is a passthrough to restangular element's getList method.
+* see [Restangular Element Methods](https://github.com/mgonto/restangular/blob/master/README.md#element-methods)
+
+#### Properties
+
+* **$restangularCollection:Boolean** *(FALSE)* - Is this object a restangular collection
+* **$restangularElement:Boolean** *(TRUE)* - Is this object a restangular element
+* **_changed** - Has this object changed since the last communication to / from the REST server
+
+### collectionInstance
+
+*Not Injectable*
+A collection created by retrieving a set of elements from a REST server. This is a restangular collection.
+
+#### Methods
+
+* **hasNext():Boolean** - Returns true if the collection has more results not loaded from the REST server
+* **getNext([queryParams:Object]):[Promise](#PromiseFill)** - Fetches the next page of results from the REST server and appends them to the collection. The promise will resolve with the current collection once the next page has been fetched.
+* **resolve(propertyPaths:Array):[Promise](#PromiseFill)** - A method which will attempt to resolve the properties from the paths provided for all element members. The promise will resolve with the collection once all paths for all elements have been resolved
+* **get([id:String]):Promise** - A method to get an element from the collection. This is a passthrough to restangular collection's get method.
+* **getList([queryParams:Object, headers:Object]):[Promise](#PromiseFill)** - A method to get the collection again. This is a passthrough to restangular collection's getList method.
+* see [Restangular Collection Methods](https://github.com/mgonto/restangular/blob/master/README.md#collection-methods)
+
+#### Properties
+
+* **$restangularCollection:Boolean** *(TRUE)* - Is this object a restangular collection
+* **$restangularElement:Boolean** *(FALSE)* - Is this object a restangular element
+* **_changed** - Has this object changed since the last communication to / from the REST server
+
+### PromiseFill
+
+*Not Injectable*
+The promise fill object are temporary accessors to what will be an element or collection.
+see [Restangular Enhanced Promises](https://github.com/mgonto/restangular/blob/master/README.md#enhanced-promises).
+This library uses these promise fill objects to allow sending an element to the template and allowing Angular's scope digest to force the resolution of linked properties.
+Restangular's promise fills are enhanced by making them "thenable" and able to be resolved using the $q service.
+see [Angular's $q Service](https://docs.angularjs.org/api/ng/service/$q)
+
+#### Methods
+
+* **then(successCallback:Function, [errorCallback:Function]):Promise** - A method to chain actions once a resolution is finished.
+* **catch(errorCallback:Function):[Promise](#PromiseFill)** - A method to catch errors in the promise chain.
+* **finally(callback:Function)** - A method to execute once the promise chain is complete regardless.
+
+#### Properties
+
+* **$object:Array** - The promise fill object which can be sent to the scope. It is an array because an Array is an Object, but an Object is not an Array. There is no way for the system to know if a child property will be a collection or an element. 
+
+### HateoasDecorator
+
+A utility used by the HateoasApi service to decorate restangular elements and collections.
+
+#### Methods
+
+* **decorate(restangularObject:Object, isCollection:Boolean):Object** - The entrypoint to decorate a restangular object. Returns the mutated object.
+* **decorateElement(restangularElement:Object):Object** - The entrypoint to decorate a restangular element. Returns the mutated element.
+* **decorateCollection(restangularCollection:Array):Array** - The entrypoint to decorate a restangular collection. Returns the mutated collection.
+
+### HateoasCommon
+
+A collection of utility methods used throughout the library to manipulate HATEOAS objects, links, and properties.
+
+#### Methods
+
+* **getId(restangularElement:Object):String** - The common method used to get an element's ID
+* **applyHateoasChild(restangularElement:Object, childName:String)** - Used to apply the dynamic promise fill for a linked child object.
+* **cleanTemplatedLinks(links:Object|String):Object|String** - Used to parse link templates and remove template structures.
+* **convertFromHateoas(restangularObject:Object):Object** - Used to apply lazy-loading promise fills for linked child objects. Returns the mutated object.
+* **convertToHateoas(restangularObject:Object|Array):Object|Array** - Used to replace nested child objects with HATEOAS references. Returns an object for restangular elements, and an array for collections.
+* **isRestangularProperty(propertyName:String):Boolean** - Used to determine if a property is part of the system's operation.
+* **defineChildValue(object:Object, childName:String, value:*):Object** - Used to apply a property with *childName*, having *value* to *object*. Returns the mutated object.
+* **defineHiddenChildValue(object:Object, childName:String, value:*):Object** - Used to apply a non-enumerable, property with *childName*, having *value* to object. Returns the mutated object.
+
+
+##TL;DR;
 
 The Restangular-HATEOAS module builds Restangularized objects with dynamic linked properties which will lazy-load when accessed.
-
-## Dependencies
-- [AngularJS](https://angularjs.org)
-- [Restangular](https://github.com/mgonto/restangular)
-
-
 
 *_(WIP)_*
 

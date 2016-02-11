@@ -1,10 +1,10 @@
-/* global angular, Object, _ */
+/* global angular, _ */
 
-(function (angular, Object, _) {
+(function (angular, _) {
     'use strict';
     angular.module('restangular-hateoas')
-    .factory('HateoasDecorator', function (hateoasConfiguration, HateoasCommon, $q) {
-        var map = hateoasConfiguration.map;
+    .factory('HateoasDecorator', function (HateoasConfiguration, HateoasCommon, $q) {
+        var map = HateoasConfiguration.map;
 
         function saveElement(restangularElement) {
             if (_.get(restangularElement, map.fromServer)) {
@@ -169,4 +169,4 @@
 
         return HateoasDecorator;
     });
-}(angular, Object, _));
+}(angular, _));
