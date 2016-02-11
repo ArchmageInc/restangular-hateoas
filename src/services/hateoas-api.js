@@ -103,9 +103,13 @@
         function createElement(apiInstance, serviceInstance, properties) {
             properties = _.pick(properties, _.keys(serviceInstance._modelDefaults));
 
-            var model = apiInstance.restangularizeElement(null, _.clone(serviceInstance._modelDefaults), serviceInstance._route);
+            var element = _.extend(_.clone(serviceInstance._modelDefaults), properties);
 
-            _.extend(model, properties);
+            _.each(element, function (value, property) {
+                _.set(element, property, _.result(element, property));
+            });
+
+            var model = apiInstance.restangularizeElement(null, element, serviceInstance._route);
 
             return model;
         }

@@ -20,6 +20,9 @@ This way, if the property is not accessed, it does not need to send another requ
   - [HateoasApi](#hateoasapi)
   - [HateoasDecorator](#hateoasdecorator)
   - [HateoasCommon](#hateoascommon)
+- [Classes](#services)
+  - [HateoasApi](#hateoasapi)
+  - [ModelService](#modelservice)
 
 ## Dependencies
 
@@ -128,7 +131,7 @@ angular.module('myModule', ['restangular-hateoas'])
     .factory('myApi', function (HateoasApi) {
         return new HateoasApi('http://myUrl');
     })
-    .controller('myController', function (myApi) {
+    .controller('myController', function ($scope, myApi) {
         $scope.parent = myApi.one('parent', 'parent_id').get().$object;
     });
 ```
@@ -153,13 +156,16 @@ In the traditional fashion, we would have to remove the *$scope.relatedChildren*
 
 ## Caveats
 
-While it is save to access any depth of linked children with a template and have it resolved through the scope digest, accessing them through JavaScript requires some additional care. 
+While it is safe to access any depth of linked children with a template and have it resolved through the scope digest, accessing them through JavaScript requires some additional care. 
 Because objects may be passed through directives, service methods, etc... it is important to keep this in mind, just as one would when dealing with Restangular's promise fill objects.
 Sending the promise fill object to the scope and template works well in its simple form, but consider the following traditional Restangular example:
 
 ```javascript
 angular.module('myModule', ['restangular'])
-    .controller('myController', function (Restangular) {
+    .config(function (RestangularProvider) {
+        RestangularProvider.setBaseUrl('http://myUrl');
+    })
+    .controller('myController', function ($scope, Restangular) {
         $scope.parent = Restangular.one('parent', 'parent_id').get().$object;
 
         if ($scope.parent.someProperty === 'someValue' ) {
@@ -178,7 +184,7 @@ angular.module('myModule', ['restangular'])
     .config(function (RestangularProvider) {
         RestangularProvider.setBaseUrl('http://myUrl');
     })
-    .controller('myController', function (Restangular) {
+    .controller('myController', function ($scope, Restangular) {
         Restangular.one('parent', 'parent_id').get().then(function (parent) {
             $scope.parent = parent;
             if (parent.someProperty === 'someValue') {
@@ -190,14 +196,14 @@ angular.module('myModule', ['restangular'])
     });
 ```
 
-So to must this be considered when using child properties dynamically loaded:
+So too must this be considered when using child properties dynamically loaded:
 
 ```javascript
 angular.module('myModule', ['restangular-hateoas'])
     .factory('myApi', function (HateoasApi) {
         return new HateoasApi('http://myUrl');
     })
-    .controller('myController', function (myApi, $q) {
+    .controller('myController', function ($scope, $q, myApi) {
         myApi.one('parent', 'parent_id').get().then(function (parent) {
             $scope.parent = parent;
             $q.when(parent.child).then(function (child) {
@@ -221,7 +227,7 @@ angular.module('myModule', ['restangular-hateoas'])
     .factory('myApi', function (HateoasApi) {
         return new HateoasApi('http://myUrl');
     })
-    .controller('myController', function (myApi) {
+    .controller('myController', function ($scope, myApi) {
         myApi.one('parent', 'parent_id').get().then(function (parent) {
             $scope.parent = parent;
             parent.resolve(['child.grandChild']).then(function (grandChild) {
@@ -244,7 +250,7 @@ angular.module('myModule', ['restangular-hateoas'])
     .factory('myApi', function (HateoasApi) {
         return new HateoasApi('http://myUrl');
     })
-    .controller('myController', function (myApi) {
+    .controller('myController', function ($scope, myApi) {
         myApi.one('parent', 'parent_id').get().then(function (parent) {
             $scope.parent = parent;
             parent.resolve(['child.grandChild']).then(function (grandChild) {
@@ -269,7 +275,7 @@ angular.module('myModule', ['restangular-hateoas'])
     .factory('myApi', function (HateoasApi) {
         return new HateoasApi('http://myUrl');
     })
-    .controller('myController', function (myApi, $q) {
+    .controller('myController', function ($scope, $q, myApi) {
         myApi.one('parent', 'parent_id').get().then(function (parent) {
             $scope.parent = parent;
             $q.all({
@@ -306,7 +312,7 @@ angular.module('myModule', ['restangular'])
     .config(function (RestangularProvider) {
         RestangularProvider.setBaseUrl('http://myUrl');
     })
-    .controller('myController', function (Restangular, $q) {
+    .controller('myController', function ($scope, $q, Restangular) {
         $q.all({
             parent: Restangular.one('parent', 'parent_id').get(),
             child: Restangular.one('parent', 'parent_id').one('child').get(),
@@ -372,7 +378,7 @@ The configuration service injected into HateoasApi instances
 
 #### Properties
 
-* **map** - The configuration object storing property keys. see [HateoasConfigurationProvider](#HateoasConfigurationProvider)
+* **map** - The configuration object storing property keys. see [HateoasConfigurationProvider](#hateoasconfigurationprovider)
 
 ### HateoasApi
 
@@ -388,7 +394,7 @@ An API communication layer to a specific REST server
 #### Properties
 
 * **authorization** - An authorization object used to authenticate HTTP requests
-* **ModelService** *(CLASS)* (see [ModelService](#ModelService))
+* **ModelService** *(CLASS)* (see [ModelService](#modelservice))
 
 ### ModelService
 
@@ -398,12 +404,59 @@ An API communication layer to a specific endpoint of a REST server
 
 ### Methods
 * **constructor(route:String, [modelDefaults:Object, configuration:Object]):ModelService** - Instantiate a model service for a given endpoint / route
-* **create([properties:Object]):modelInstance** - Create a restangular element from this service's endpoint (see [ModelInstance](#modelInstance))
+* **create([properties:Object]):modelInstance** - Create a restangular element from this service's endpoint (see [ModelInstance](#modelinstance))
 
 #### Properties
 
 * **_modelDefaults** - An object containing the default property values for created elements
 * **_route** - The route governed by the service instance
+
+#### Example
+```javascript
+angular.module('myModule', ['restangular-hateoas'])
+    .factory('myApi', function (HateoasApi) {
+        return new HateoasApi('http://myUrl');
+    })
+    .factory('myUserSvc', function (myApi) {
+        var myUserSvc = new myApi.ModelService('users', {
+            firstName: '',
+            lastName: '',
+            createDate: function () {
+                return new Date();
+            }
+        });
+
+        return myUserSvc;
+    })
+    .controller('myController', function ($scope, $routeParams, myUserSvc) {
+        $scope.message = '';
+        $scope.title = $routeParams.userId ? 'Edit' : 'Create';
+        $scope.user = $routeParams.userId ? myUserSvc.one($routeParams.userId).get().$object : myUserSvc.create();
+
+        $scope.saveUser = function () {
+            $scope.user.save().then(function (user) {
+                $scope.message = 'The user has been saved successfully.';
+            })
+            .catch(function (error) {
+                $scope.message = 'There was an error saving the user.';
+            });
+        };
+    });  
+```
+
+In the above example, the controller checks the route parameters and if they contain a user ID,
+the user is fetched from the *http://myUrl/users/userId* endpoint and passed to the scope as a promise fill object.
+If the parameters do not contain a user ID, a restangular element with the *firstName*, *lastName*, and *createDate* properties
+are assigned to the *$scope.user* variable and the *createDate* property is a date object with the current date and time.
+
+The *$scope.title* property is either Edit or Create depending on the presence of the userId in the route parameters.
+
+A function has been attached to the scope as *$scope.saveUser* so that when executed, the user is saved.
+If it is a new user, the system will perform an HTTP POST to *http://myUrl/users*.
+If it is an existing user, the system will perform an HTTP PATCH to *http://myUrl/users/userId*
+
+Provided the HTTP call to the API is successful, the *$scope.message* property will be set to a success message.
+Otherwise, the *$scope.message* will be set to the error message.
 
 ###modelInstance
 
@@ -414,12 +467,12 @@ An element created through a call to a ModelService instance's create method. Th
 #### Methods
 
 * **getId():String** - A method to retrieve the element's id
-* **save():[Promise](#PromiseFill)** - A method which will POST for new elements and PATCH changed properties for existing elements
+* **save():[Promise](#promisefill)** - A method which will POST for new elements and PATCH changed properties for existing elements
 * **revert():modelInstance** - A method which will modify the elements properties and reset them to the last state communicated to or from the REST server
 * **getChangedProperties():Object** - A method which will return an object containing only the properties and values that have changed since the last communication to or from the REST server
-* **resolve(propertyPaths:Array):[Promise](#PromiseFill)** - A method which will attempt to resolve the element / child element properties from the paths provided. The promise will resolve with the element once all paths have been resolved
-* **get([queryParams:Object, headers:Object]):[Promise](#PromiseFill)** - A method to get the element. This is a passthrough to restangular element's get method.
-* **getList(subElement:String, [queryParams:Object, headers:Object]):[Promise](#PromiseFill)** - A method to get a nested collection. This is a passthrough to restangular element's getList method.
+* **resolve(propertyPaths:Array):[Promise](#promisefill)** - A method which will attempt to resolve the element / child element properties from the paths provided. The promise will resolve with the element once all paths have been resolved
+* **get([queryParams:Object, headers:Object]):[Promise](#promisefill)** - A method to get the element. This is a passthrough to restangular element's get method.
+* **getList(subElement:String, [queryParams:Object, headers:Object]):[Promise](#promisefill)** - A method to get a nested collection. This is a passthrough to restangular element's getList method.
 * see [Restangular Element Methods](https://github.com/mgonto/restangular/blob/master/README.md#element-methods)
 
 #### Properties
@@ -437,10 +490,10 @@ A collection created by retrieving a set of elements from a REST server. This is
 #### Methods
 
 * **hasNext():Boolean** - Returns true if the collection has more results not loaded from the REST server
-* **getNext([queryParams:Object]):[Promise](#PromiseFill)** - Fetches the next page of results from the REST server and appends them to the collection. The promise will resolve with the current collection once the next page has been fetched.
-* **resolve(propertyPaths:Array):[Promise](#PromiseFill)** - A method which will attempt to resolve the properties from the paths provided for all element members. The promise will resolve with the collection once all paths for all elements have been resolved
+* **getNext([queryParams:Object]):[Promise](#promisefill)** - Fetches the next page of results from the REST server and appends them to the collection. The promise will resolve with the current collection once the next page has been fetched.
+* **resolve(propertyPaths:Array):[Promise](#promisefill)** - A method which will attempt to resolve the properties from the paths provided for all element members. The promise will resolve with the collection once all paths for all elements have been resolved
 * **get([id:String]):Promise** - A method to get an element from the collection. This is a passthrough to restangular collection's get method.
-* **getList([queryParams:Object, headers:Object]):[Promise](#PromiseFill)** - A method to get the collection again. This is a passthrough to restangular collection's getList method.
+* **getList([queryParams:Object, headers:Object]):[Promise](#promisefill)** - A method to get the collection again. This is a passthrough to restangular collection's getList method.
 * see [Restangular Collection Methods](https://github.com/mgonto/restangular/blob/master/README.md#collection-methods)
 
 #### Properties
@@ -462,7 +515,7 @@ see [Angular's $q Service](https://docs.angularjs.org/api/ng/service/$q)
 #### Methods
 
 * **then(successCallback:Function, [errorCallback:Function]):Promise** - A method to chain actions once a resolution is finished.
-* **catch(errorCallback:Function):[Promise](#PromiseFill)** - A method to catch errors in the promise chain.
+* **catch(errorCallback:Function):[Promise](#promisefill)** - A method to catch errors in the promise chain.
 * **finally(callback:Function)** - A method to execute once the promise chain is complete regardless.
 
 #### Properties
